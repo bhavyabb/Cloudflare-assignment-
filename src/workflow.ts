@@ -27,32 +27,49 @@ export class FeedbackPipelineWorkflow extends WorkflowEntrypoint<Env, {}> {
     const totalBatches = Math.ceil(counts.unprocessed / BATCH_SIZE);
 
     // STEP 2: Sentiment analysis in batches
-    for (let i = 0; i < totalBatches; i++) {
-      await step.do(`sentiment-batch-${i}`, async () => {
-        const rows = await this.env.DB.prepare(
-          'SELECT id, content FROM feedback WHERE sentiment IS NULL LIMIT ?'
-        ).bind(BATCH_SIZE).all();
+for (let i = 0; i < totalBatches; i++) {
+  await step.do(`sentiment-batch-${i}`, async () => {
+    const rows = await this.env.DB.prepare(
+      'SELECT id, content FROM feedback WHERE sentiment IS NULL LIMIT ?'
+    ).bind(BATCH_SIZE).all();
 
-        for (const row of rows.results) {
-          const r = row as any;
-          try {
-            const result: any = await this.env.AI.run('@cf/huggingface/distilbert-sst-2-int8', {
-              text: r.content
-            });
-            const label = Array.isArray(result) ? result[0]?.label : result?.label || 'unknown';
-            const score = Array.isArray(result) ? result[0]?.score : result?.score || 0.5;
-            await this.env.DB.prepare(
-              'UPDATE feedback SET sentiment = ?, sentiment_score = ? WHERE id = ?'
-            ).bind(label.toLowerCase(), score, r.id).run();
-          } catch {
-            await this.env.DB.prepare(
-              'UPDATE feedback SET sentiment = ?, sentiment_score = ? WHERE id = ?'
-            ).bind('unknown', 0.5, r.id).run();
-          }
+    for (const row of rows.results) {
+      const r = row as any;
+
+      try {
+        const result: any = await this.env.AI.run('@cf/huggingface/distilbert-sst-2-int8', {
+          text: r.content
+        });
+
+        let label = 'unknown';
+        let score = 0.5;
+
+        if (Array.isArray(result) && result[0]) {
+          label = String(result[0].label || 'unknown').toLowerCase();
+          score = Number(result[0].score || 0.5);
+        } else if (result?.label) {
+          label = String(result.label || 'unknown').toLowerCase();
+          score = Number(result.score || 0.5);
+        } else {
+          const fb = fallbackSentiment(r.content);
+          label = fb.label;
+          score = fb.score;
         }
-        return { processed: rows.results.length };
-      });
+
+        await this.env.DB.prepare(
+          'UPDATE feedback SET sentiment = ?, sentiment_score = ? WHERE id = ?'
+        ).bind(label, score, r.id).run();
+      } catch {
+        const fb = fallbackSentiment(r.content);
+        await this.env.DB.prepare(
+          'UPDATE feedback SET sentiment = ?, sentiment_score = ? WHERE id = ?'
+        ).bind(fb.label, fb.score, r.id).run();
+      }
     }
+
+    return { processed: rows.results.length };
+  });
+}
 
     // STEP 3: Urgency classification in batches
     for (let i = 0; i < totalBatches; i++) {
