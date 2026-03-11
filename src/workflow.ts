@@ -235,7 +235,26 @@ Respond with ONLY valid JSON array, no other text.`;
     return { success: true, total: counts.total, generated_at: new Date().toISOString() };
   }
 }
+function fallbackSentiment(text: string): { label: string; score: number } {
+  const t = text.toLowerCase();
 
+  const negativeWords = [
+    'broken', 'bug', 'fails', 'failing', 'error', 'crash', 'issue',
+    'outage', 'slow', 'confusing', 'missing', 'bad', 'terrible', 'hate'
+  ];
+
+  const positiveWords = [
+    'great', 'love', 'helpful', 'fast', 'excellent', 'good', 'smooth',
+    'awesome', 'useful', 'nice'
+  ];
+
+  const neg = negativeWords.some((w) => t.includes(w));
+  const pos = positiveWords.some((w) => t.includes(w));
+
+  if (neg && !pos) return { label: 'negative', score: 0.8 };
+  if (pos && !neg) return { label: 'positive', score: 0.8 };
+  return { label: 'neutral', score: 0.5 };
+}
 function defaultActions(): string[] {
   return [
     'Review critical D1 database stability issues reported by enterprise customers',
