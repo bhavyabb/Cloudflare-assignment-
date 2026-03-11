@@ -18,27 +18,35 @@ app.get('/', (c) => {
 // Seed D1 with mock data
 app.post('/api/seed', async (c) => {
   try {
-    await c.env.DB.exec(`CREATE TABLE IF NOT EXISTS feedback (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      source TEXT NOT NULL, author TEXT NOT NULL, content TEXT NOT NULL,
-      urgency TEXT, computed_urgency TEXT, sentiment TEXT, sentiment_score REAL,
-      category TEXT, product_area TEXT, theme_cluster TEXT,
-      created_at TEXT NOT NULL, processed_at TEXT
-    )`);
-
     await c.env.DB.exec('DELETE FROM feedback');
 
     const statements = SEED_SQL_STATEMENTS;
     const BATCH = 20;
     let inserted = 0;
+
     for (let i = 0; i < statements.length; i += BATCH) {
       const batch = statements.slice(i, i + BATCH);
-      await c.env.DB.batch(batch.map(s => c.env.DB.prepare(s.sql).bind(...s.params)));
+      await c.env.DB.batch(
+        batch.map((s) => c.env.DB.prepare(s.sql).bind(...s.params))
+      );
       inserted += batch.length;
     }
-    return c.json({ success: true, inserted });
+
+    const total = await c.env.DB
+      .prepare('SELECT COUNT(*) as c FROM feedback')
+      .first<{ c: number }>();
+
+    return c.json({
+      success: true,
+      inserted,
+      total: total?.c || 0
+    });
   } catch (e: any) {
-    return c.json({ error: e.message }, 500);
+    return c.json({
+      success: false,
+      error: e.message,
+      stack: e.stack || null
+    }, 500);
   }
 });
 
