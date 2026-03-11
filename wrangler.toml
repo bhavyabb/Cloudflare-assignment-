@@ -10,15 +10,11 @@ enabled = true
 [[d1_databases]]
 binding = "DB"
 database_name = "feedbackpulse-db"
-database_id = "REPLACE_ME"
+database_id = "f8167793-0692-460f-aab0-199d1fecd574"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "REPLACE_ME"
-
-[[r2_buckets]]
-binding = "R2"
-bucket_name = "feedbackpulse-data"
+id = "8e514f7b52cf4e0eaf9128ffcca87b3f"
 
 [ai]
 binding = "AI"

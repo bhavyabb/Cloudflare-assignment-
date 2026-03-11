@@ -93,33 +93,6 @@ app.get('/api/slack-payload', async (c) => {
   return c.json(data || { blocks: [] });
 });
 
-// AI Search: query for similar feedback themes
-app.get('/api/themes', async (c) => {
-  const query = c.req.query('query') || 'common issues';
-  try {
-    const result = await (c.env.AI as any).autorag('feedbackpulse-rag').search({
-      query,
-      max_num_results: 10
-    });
-    return c.json(result);
-  } catch (e: any) {
-    return c.json({ error: 'AI Search not available or not indexed yet', detail: e.message }, 500);
-  }
-});
-
-// Export feedback to R2 (manual trigger)
-app.post('/api/export-to-r2', async (c) => {
-  const rows = await c.env.DB.prepare('SELECT * FROM feedback').all();
-  let exported = 0;
-  for (const row of rows.results) {
-    const r = row as any;
-    const content = `Source: ${r.source}\nAuthor: ${r.author}\nUrgency: ${r.computed_urgency || r.urgency || 'unknown'}\nSentiment: ${r.sentiment || 'unknown'}\nProduct: ${r.product_area || 'unknown'}\nDate: ${r.created_at}\n---\n${r.content}`;
-    await c.env.R2.put(`feedback/${r.source}/${r.id}.txt`, content);
-    exported++;
-  }
-  return c.json({ exported });
-});
-
 // Aggregate stats (no AI, just SQL)
 app.get('/api/stats', async (c) => {
   const total = await c.env.DB.prepare('SELECT COUNT(*) as c FROM feedback').first();

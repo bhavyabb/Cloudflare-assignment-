@@ -1,7 +1,6 @@
 export interface Env {
   DB: D1Database;
   KV: KVNamespace;
-  R2: R2Bucket;
   AI: Ai;
   FEEDBACK_PIPELINE: Workflow;
 }
@@ -27,8 +26,7 @@ export interface PriorityMatrixItem {
   priority: 'critical' | 'high' | 'medium' | 'low';
   issue_count: number;
   top_issues: string[];
-  sentiment_avg: number;
-  sample_feedback_ids: number[];
+  recommendation?: string;
 }
 
 export interface DailySummary {
@@ -38,6 +36,5 @@ export interface DailySummary {
   by_sentiment: Record<string, number>;
   by_urgency: Record<string, number>;
   priority_matrix: PriorityMatrixItem[];
-  top_themes: Array<{ theme: string; count: number; urgency: string }>;
   action_items: string[];
 }

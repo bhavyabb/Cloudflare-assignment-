@@ -95,7 +95,7 @@ export class FeedbackPipelineWorkflow extends WorkflowEntrypoint<Env, {}> {
           'SELECT id, content FROM feedback WHERE product_area IS NULL LIMIT ?'
         ).bind(BATCH_SIZE).all();
 
-        const areas = ['D1-Database', 'KV-Storage', 'R2-Storage', 'Workers-Runtime', 'Workers-AI', 'Wrangler-CLI', 'Dashboard-UI', 'Documentation', 'Pricing', 'Workflows', 'Durable-Objects', 'Networking', 'Security', 'Other'];
+        const areas = ['D1-Database', 'KV-Storage', 'Workers-Runtime', 'Workers-AI', 'Wrangler-CLI', 'Dashboard-UI', 'Documentation', 'Pricing', 'Workflows', 'Durable-Objects', 'Networking', 'Security', 'Other'];
 
         for (const row of rows.results) {
           const r = row as any;
@@ -103,7 +103,7 @@ export class FeedbackPipelineWorkflow extends WorkflowEntrypoint<Env, {}> {
             const res: any = await (this.env.AI as any).run('@cf/meta/llama-3.1-8b-instruct', {
               messages: [{
                 role: 'user',
-                content: `Classify this Cloudflare feedback into one area. Options: D1-Database, KV-Storage, R2-Storage, Workers-Runtime, Workers-AI, Wrangler-CLI, Dashboard-UI, Documentation, Pricing, Workflows, Durable-Objects, Networking, Other. Reply with ONLY the area name.\n\n${r.content.substring(0, 300)}`
+                content: `Classify this Cloudflare feedback into one area. Options: D1-Database, KV-Storage, Workers-Runtime, Workers-AI, Wrangler-CLI, Dashboard-UI, Documentation, Pricing, Workflows, Durable-Objects, Networking, Other. Reply with ONLY the area name.\n\n${r.content.substring(0, 300)}`
               }],
               max_tokens: 15
             });
@@ -122,22 +122,7 @@ export class FeedbackPipelineWorkflow extends WorkflowEntrypoint<Env, {}> {
       });
     }
 
-    // STEP 5: Export feedback to R2
-    await step.do('export-to-r2', async () => {
-      const rows = await this.env.DB.prepare(
-        'SELECT * FROM feedback WHERE processed_at IS NULL'
-      ).all();
-      let exported = 0;
-      for (const row of rows.results) {
-        const r = row as any;
-        const content = `Source: ${r.source}\nAuthor: ${r.author}\nUrgency: ${r.computed_urgency || r.urgency || 'unknown'}\nSentiment: ${r.sentiment || 'unknown'}\nProduct Area: ${r.product_area || 'unknown'}\nDate: ${r.created_at}\n---\n${r.content}`;
-        await this.env.R2.put(`feedback/${r.source}/${r.id}.txt`, content);
-        exported++;
-      }
-      return { exported };
-    });
-
-    // STEP 6: Build aggregate statistics
+    // STEP 5: Build aggregate statistics
     const aggregates: AggregateData = await step.do('build-aggregates', async () => {
       const bySource = await this.env.DB.prepare(
         'SELECT source, COUNT(*) as cnt FROM feedback GROUP BY source'

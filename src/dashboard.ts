@@ -35,7 +35,6 @@ export function getDashboardHtml(): string {
       <div class="flex gap-3">
         <button onclick="seedData()" id="btn-seed" class="bg-white text-orange-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-50 transition">Seed Data</button>
         <button onclick="runPipeline()" id="btn-pipeline" class="bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-800 transition">Run Pipeline</button>
-        <button onclick="exportR2()" id="btn-export" class="bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition">Export to R2</button>
       </div>
     </div>
   </header>
@@ -161,7 +160,7 @@ export function getDashboardHtml(): string {
   </main>
 
   <footer class="max-w-7xl mx-auto px-4 py-6 text-center text-xs text-gray-400">
-    FeedbackPulse — Built on Cloudflare Workers, D1, R2, KV, Workers AI, and Workflows
+    FeedbackPulse — Built on Cloudflare Workers, D1, KV, Workers AI, and Workflows
   </footer>
 
   <script>
@@ -234,18 +233,6 @@ export function getDashboardHtml(): string {
         }
       };
       poll();
-    }
-
-    async function exportR2() {
-      showStatus('Exporting feedback to R2...');
-      try {
-        const res = await fetch('/api/export-to-r2', { method: 'POST' });
-        const data = await res.json();
-        showStatus('Exported ' + data.exported + ' items to R2.');
-        setTimeout(hideStatus, 2000);
-      } catch (e) {
-        showStatus('Error: ' + e.message);
-      }
     }
 
     async function loadStats() {
